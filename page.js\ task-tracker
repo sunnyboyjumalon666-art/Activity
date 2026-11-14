@@ -1,0 +1,192 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+
+const STORAGE_KEY = 'task-tracker-tasks';
+
+export default function TaskTrackerPage() {
+  const [tasks, setTasks] = useState([]);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) setTasks(JSON.parse(saved));
+    } catch (err) {
+      console.error('Could not load tasks', err);
+    }
+  }, []);
+
+  const saveTasks = (nextTasks) => {
+    setTasks(nextTasks);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextTasks));
+    } catch (err) {
+      console.error('Could not save tasks', err);
+    }
+  };
+
+  const handleTitleChange = (e) => {
+    setTaskTitle(e.target.value);
+    if (errorMessage) setErrorMessage('');
+  };
+
+  const handleAddTask = (e) => {
+    e.preventDefault();
+    const trimmedTitle = taskTitle.trim();
+
+    if (trimmedTitle === '') {
+      setErrorMessage('Task title cannot be empty.');
+      return;
+    }
+
+    const newTask = {
+      id: Date.now(),
+      title: trimmedTitle,
+      completed: false,
+    };
+
+    saveTasks([...tasks, newTask]);
+    setTaskTitle('');
+    setErrorMessage('');
+  };
+
+  const toggleTask = (id) => {
+    saveTasks(
+      tasks.map((task) =>
+        task.id === id ? { ...task, completed: !task.completed } : task
+      )
+    );
+  };
+
+  const deleteTask = (id) => {
+    saveTasks(tasks.filter((task) => task.id !== id));
+  };
+
+  return (
+    <main style={s.page}>
+      <div style={s.wrap}>
+        <div style={s.head}>
+          <h1 style={s.title}>Task tracker</h1>
+          <Link href="/" style={s.link}>
+            View display page
+          </Link>
+        </div>
+
+        <form onSubmit={handleAddTask} style={s.form}>
+          <input
+            type="text"
+            value={taskTitle}
+            onChange={handleTitleChange}
+            placeholder="Add a new task"
+            aria-label="Task title"
+            style={{
+              ...s.input,
+              borderColor: errorMessage ? '#C62828' : '#1B1B3A',
+            }}
+          />
+          <button type="submit" style={s.addBtn}>
+            Add
+          </button>
+        </form>
+
+        {errorMessage && (
+          <p role="alert" style={s.error}>
+            {errorMessage}
+          </p>
+        )}
+
+        {tasks.length === 0 ? (
+          <p style={s.empty}>No tasks added yet. Start by creating one above!</p>
+        ) : (
+          <ul style={s.list}>
+            {tasks.map((task) => (
+              <li key={task.id} style={s.item}>
+                <span
+                  style={{
+                    ...s.text,
+                    textDecoration: task.completed ? 'line-through' : 'none',
+                    color: task.completed ? '#8C8CA8' : '#1B1B3A',
+                  }}
+                >
+                  {task.title}
+                </span>
+                <button onClick={() => toggleTask(task.id)} style={s.btn}>
+                  {task.completed ? 'Undo' : 'Done'}
+                </button>
+                <button
+                  onClick={() => deleteTask(task.id)}
+                  style={{ ...s.btn, color: '#C62828', borderColor: '#C62828' }}
+                >
+                  Delete
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </main>
+  );
+}
+
+const s = {
+  page: {
+    minHeight: '100vh',
+    background: '#FFFFFF',
+    color: '#1B1B3A',
+    fontFamily: 'system-ui, sans-serif',
+    padding: '56px 20px',
+  },
+  wrap: { maxWidth: '640px', margin: '0 auto' },
+  head: {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: '16px',
+    marginBottom: '24px',
+  },
+  title: { fontSize: '32px', fontWeight: 800, margin: 0 },
+  link: { color: '#6C4CF1', fontWeight: 600 },
+  form: { display: 'flex', gap: '10px' },
+  input: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: '16px',
+    padding: '13px 14px',
+    border: '2px solid #1B1B3A',
+    borderRadius: '10px',
+  },
+  addBtn: {
+    fontSize: '16px',
+    fontWeight: 700,
+    color: '#FFFFFF',
+    background: '#6C4CF1',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '0 22px',
+    cursor: 'pointer',
+  },
+  error: { color: '#C62828', fontWeight: 600, margin: '10px 0 0' },
+  empty: { marginTop: '40px', fontSize: '18px', color: '#5B5B7B' },
+  list: { listStyle: 'none', margin: '32px 0 0', padding: 0 },
+  item: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '14px 0',
+    borderTop: '1px solid #E4E2F2',
+  },
+  text: { flex: 1, fontSize: '18px', overflowWrap: 'anywhere' },
+  btn: {
+    fontSize: '14px',
+    fontWeight: 600,
+    padding: '6px 12px',
+    borderRadius: '8px',
+    border: '2px solid #1B1B3A',
+    background: 'transparent',
+    color: '#1B1B3A',
+    cursor: 'pointer',
+  },
+};
